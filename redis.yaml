@@ -1,0 +1,34 @@
+---
+- hosts: redis
+  remote_user: root
+  vars:
+    redis_data_dir: /usr/local/redis/data
+    var_dir: /usr/local/redis
+    unarch: /usr/local
+    redis_dir: /usr/local/redis-4.0.10
+  tasks:
+    - name: Installredis base packages
+      yum: name={{ item }} state=installed
+      with_items:
+        - gcc
+        - make
+    - name: 创建redis数据目录
+      file: path={{ redis_data_dir }} state=directory
+
+    - name: 复制redis包到远程主机
+      copy: src=./file/redis-4.0.10.tar.gz dest=/usr/local/
+
+    - name: 解压包
+      shell: chdir=/usr/local/ tar zxf redis-4.0.10.tar.gz
+    - name: 创建软连接
+      shell: ln -s /usr/local/redis-4.0.10/  /usr/local/redis
+    - name:  安装
+      shell: cd /usr/local/redis/redis-4.0.10/  && make 
+    - name:  修改配置文件/redis.conf
+      shell:  sed -i 's/^protected-mode yes$/protected-mode no/' /usr/local/redis/redis-4.0.10/redis.conf    &&    echo " requirepass 123  "   >> /usr/local/redis/redis-4.0.10/redis.conf  &&  sed -i 's/^daemonize no$/daemonize yes/g' /usr/local/redis/redis-4.0.10/redis.conf  &&  sed -i 's/^bind 127.0.0.1$/bind 0.0.0.0/g' /usr/local/redis/redis-4.0.10/redis.conf    &&       echo "  masterauth 123  "   >> /usr/local/redis/redis-4.0.10/redis.conf   
+    - name:  修改配置哨兵文件sentinel.conf
+      shell: echo "bind 0.0.0.0" >> /usr/local/redis/redis-4.0.10/sentinel.conf &&  sed -i  's/^dir \/tmp$/dir \"\/usr\/local\/redis\/tmp\"/g' /usr/local/redis/redis-4.0.10/sentinel.conf && sed -i  "s/^sentinel monitor mymaster 127.0.0.1 6379 2$/sentinel monitor mymaster 192.168.147.11 6379 2/g" /usr/local/redis/redis-4.0.10/sentinel.conf   && echo " sentinel auth-pass mymaster 123 "  >> /usr/local/redis/redis-4.0.10/sentinel.conf  && echo protected-mode no  >> /usr/local/redis/redis-4.0.10/sentinel.conf   &&   echo  logfile \"./sentinel.log\"  >> /usr/local/redis/redis-4.0.10/sentinel.conf 
+
+
+
+
